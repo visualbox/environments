@@ -14,19 +14,15 @@ var (
 	lastCheck = int32(time.Now().Unix())
 )
 
-/**
- *  Update last checked timestamp.
- */
-func tick() {
+// Tick -Update last checked timestamp.
+func Tick() {
 	lastCheck = int32(time.Now().Unix())
 }
 
-/**
- *  Run drain() each TIMEOUT_TICK interval
- *  and check that the diff of lastCheck and
- *  now isn't over TIMEOUT.
- */
-func drain() {
+// Drain - each TIMEOUT_TICK interval
+// and check that the diff of lastCheck and
+// now isn't over TIMEOUT.
+func Drain() {
 	for {
 		now := int32(time.Now().Unix())
 		diff := now - lastCheck

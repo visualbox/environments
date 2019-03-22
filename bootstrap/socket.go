@@ -10,12 +10,17 @@ import (
 // wss://ods-visualbox.cs.uit.no:1337/socket.io/?EIO=3&transport=websocket
 
 const (
-	// MessageTypeInfo ...
-	MessageTypeInfo = "T_INFO"
-	// MessageTypeWarning ...
-	MessageTypeWarning = "T_WARNING"
-	// MessageTypeError ...
-	MessageTypeError = "T_ERROR"
+  // MessageTypeInit ...
+  MessageTypeInit = "INIT"
+  // MessageTypeStatus ...
+  MessageTypeStatus = "STATUS"
+
+	// StatusTypeInfo ...
+	StatusTypeInfo = "T_INFO"
+	// StatusTypeWarning ...
+	StatusTypeWarning = "T_WARNING"
+	// StatusTypeError ...
+	StatusTypeError = "T_ERROR"
 	// SocketServer ...
 	SocketServer = "ws://localhost:1337/socket.io/?EIO=3&transport=websocket"
 )
@@ -36,7 +41,7 @@ var (
 // Status ...
 func Status(statusType string, data string) {
 	message := Message{
-		Type:       "STATUS",
+		Type:       MessageTypeStatus,
 		StatusType: statusType,
 		Data:       data,
 	}
@@ -50,7 +55,7 @@ func Status(statusType string, data string) {
 func OnMessage(args Message) {
 	switch args.Type {
 	case "TICK":
-		tick()
+		Tick()
 	default:
 		log.Printf("Unknown socket message type: %v\n", args.Type)
 	}
@@ -74,7 +79,7 @@ func InitSocket() {
 
 		// Send INIT
 		err = Client.Emit("message", Message{
-			Type: "INIT",
+			Type: MessageTypeInit,
 			I:    EnvI,
 		})
 		if err != nil {

@@ -124,25 +124,37 @@ func Unzip(src string, dest string) ([]string, error) {
 
 // StartIntegration ...
 func StartIntegration() {
-	go Status(MessageTypeInfo, "starting integration")
+	go Status(StatusTypeInfo, "starting integration")
 
 	signedURL, err := GetSignedURL()
 	if err != nil {
-		Status(MessageTypeError, "unable to load integration files")
+		Status(StatusTypeError, "unable to load integration files")
 		log.Fatal(err)
 	}
 
 	err = DownloadFile(signedURL, archive)
 	if err != nil {
-		Status(MessageTypeError, "failed to start integration")
+		Status(StatusTypeError, "failed to start integration")
 		log.Fatal(err)
 	}
 
 	_, err = Unzip(archive, project)
 	if err != nil {
-		Status(MessageTypeError, "failed to write all project files to disk")
+		Status(StatusTypeError, "failed to write all project files to disk")
 		log.Fatal(err)
 	}
 
-	// Continue w/ sub-process
+	cmd := exec.Command("ls")
+	c := make(chan struct{})
+
+	go Run(cmd, c)
+
+	c <- struct{}{}
+	cmd.Start()
+
+	<- c
+	if err= cmd.Wait(); err != nil {
+		log.Println(err)
+	}
+	log.Println("Done")
 }
