@@ -1,30 +1,24 @@
-package bootstrap
+package main
 
 import (
-  "time"
+	"log"
+	"time"
 )
 
 const (
-  /**
-   *  Total amount of seconds until termination.
-   */
-  TIMEOUT = 60
-
-  /**
-   *  Interval in seconds when to check timeout.
-   */
-  TIMEOUT_TICK = 5
+	timeout     = 60
+	timeoutTick = 5
 )
 
 var (
-  lastCheck := int32(time.Now().Unix())
+	lastCheck = int32(time.Now().Unix())
 )
 
 /**
  *  Update last checked timestamp.
  */
 func tick() {
-  lastCheck = int32(time.Now().Unix())
+	lastCheck = int32(time.Now().Unix())
 }
 
 /**
@@ -33,16 +27,16 @@ func tick() {
  *  now isn't over TIMEOUT.
  */
 func drain() {
-  for {
-    now := int32(time.Now().Unix())
-    diff := now - lastCheck
+	for {
+		now := int32(time.Now().Unix())
+		diff := now - lastCheck
 
-    log.Printf("tick (terminating in %v seconds)\n", TIMEOUT - diff)
+		log.Printf("tick (terminating in %v seconds)\n", timeout-diff)
 
-    if diff >= TIMEOUT {
-      log.Println("TIMEOUT")
-    }
+		if diff >= timeout {
+			log.Println("TIMEOUT")
+		}
 
-    time.Sleep(TIMEOUT_TICK * time.Second)
-  }
+		time.Sleep(timeoutTick * time.Second)
+	}
 }
