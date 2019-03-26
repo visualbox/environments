@@ -1,0 +1,10 @@
+publish_aws.sh
+publish.sh
+Dockerfile*
+docker-compose*
+.dockerignore
+.git
+.gitignore
+README.md
+LICENSE
+.vscode
