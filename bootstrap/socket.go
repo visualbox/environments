@@ -3,30 +3,25 @@ package main
 import (
 	"log"
 
-	gosocketio "github.com/graarh/golang-socketio"
-	"github.com/graarh/golang-socketio/transport"
+	gosocketio "github.com/mtfelian/golang-socketio"
+	"github.com/mtfelian/golang-socketio/transport"
 )
 
-// wss://ods-visualbox.cs.uit.no:1337/socket.io/?EIO=3&transport=websocket
-
 const (
-  // MessageTypeInit ...
-  MessageTypeInit = "INIT"
-  // MessageTypeStatus ...
-  MessageTypeStatus = "STATUS"
-
 	// StatusTypeInfo ...
 	StatusTypeInfo = "T_INFO"
 	// StatusTypeWarning ...
 	StatusTypeWarning = "T_WARNING"
 	// StatusTypeError ...
 	StatusTypeError = "T_ERROR"
-	// SocketServer ...
-	SocketServer = "ws://localhost:1337/socket.io/?EIO=3&transport=websocket"
+
+	messageTypeInit   = "INIT"
+	messageTypeStatus = "STATUS"
+	socketServer      = "localhost" // ods-visualbox.cs.uit.no
+	sockerPort        = 1337
 )
 
-// Message ...
-type Message struct {
+type message struct {
 	Type       string `json:"type"`
 	I          string `json:"i,omitempty"`
 	StatusType string `json:"statusType,omitempty"`
@@ -34,75 +29,89 @@ type Message struct {
 }
 
 var (
-	// Client ...
-	Client gosocketio.Client
+	socketChannel *gosocketio.Channel
 )
 
 // Status ...
 func Status(statusType string, data string) {
-	message := Message{
-		Type:       MessageTypeStatus,
+	if socketChannel == nil {
+		return
+	}
+
+	message := message{
+		Type:       messageTypeStatus,
 		StatusType: statusType,
 		Data:       data,
 	}
-	err := Client.Emit("message", message)
+	log.Printf("Sending status: %v", message)
+	err := socketChannel.Emit("message", message)
 	if err != nil {
 		log.Println(err)
 	}
 }
 
-// OnMessage ...
-func OnMessage(args Message) {
-	switch args.Type {
-	case "TICK":
-		Tick()
-	default:
-		log.Printf("Unknown socket message type: %v\n", args.Type)
+func onConnectionHandler(c *gosocketio.Channel) {
+	// Join
+	err := c.Emit("join", EnvToken)
+	if err != nil {
+		log.Fatal(err)
 	}
+	// Send INIT
+	err = c.Emit("message", message{
+		Type: messageTypeInit,
+		I:    EnvI,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	socketChannel = c
+	wg.Done()
+}
+
+func onDisconnectionHandler(c *gosocketio.Channel) {
+	log.Fatal("Disconnected")
+}
+
+func onMessageHandler(c *gosocketio.Channel, data interface{}) {
+	log.Printf("--- Client channel %s received someEvent with data: %v\n", c.Id(), data)
+	/*j, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}*/
+
+	/*
+			// OnMessage ...
+		func OnMessage(args Message) {
+			switch args.Type {
+			case "TICK":
+				Tick()
+			default:
+				log.Printf("Unknown socket message type: %v\n", args.Type)
+			}
+		}
+	*/
 }
 
 // InitSocket ...
 func InitSocket() {
 	// Setup socket
-	Client, err := gosocketio.Dial(SocketServer, transport.GetDefaultWebsocketTransport())
+	client, err := gosocketio.Dial(
+		gosocketio.AddrWebsocket(socketServer, sockerPort, false),
+		transport.DefaultWebsocketTransport(),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Send join on socket connection
-	err = Client.On(gosocketio.OnConnection, func(h *gosocketio.Channel) {
-		// Join
-		err = Client.Emit("join", EnvToken)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Send INIT
-		err = Client.Emit("message", Message{
-			Type: MessageTypeInit,
-			I:    EnvI,
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-	})
-	if err != nil {
+	if err := client.On(gosocketio.OnConnection, onConnectionHandler); err != nil {
+		log.Fatal(err)
+	}
+	if err := client.On(gosocketio.OnDisconnection, onDisconnectionHandler); err != nil {
 		log.Fatal(err)
 	}
 
-	// Abort if disconnected
-	err = Client.On(gosocketio.OnDisconnection, func(h *gosocketio.Channel) {
-		log.Fatal("Disconnected")
-	})
-	if err != nil {
+	if err := client.On("message", onMessageHandler); err != nil {
 		log.Fatal(err)
-	}
-
-	// Dispatch message handler on socket message
-	err = Client.On("message", func(h *gosocketio.Channel, args Message) {
-		go OnMessage(args)
-	})
-	if err != nil {
-		log.Println(err)
 	}
 }

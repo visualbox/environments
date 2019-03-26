@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,8 +11,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const (
@@ -19,10 +22,15 @@ const (
 	project = "./project"
 )
 
+var (
+	// Proc ...
+	Proc *exec.Cmd
+)
+
 // GetSignedURL - Get signed URL for integration
 // ZIP based on instance token, integration ID
 // and integration version.
-func GetSignedURL() (string, error) {
+func getSignedURL() (string, error) {
 	url := fmt.Sprintf("https://%s.execute-api.eu-west-1.amazonaws.com/prod/registry/lfp", EnvRestAPIID)
 	body := map[string]string{
 		"token":   EnvToken,
@@ -40,8 +48,7 @@ func GetSignedURL() (string, error) {
 	return string(signedURL), err
 }
 
-// DownloadFile - Download a file from 'url' to 'dest'.
-func DownloadFile(url string, dest string) error {
+func downloadFile(url string, dest string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -66,7 +73,7 @@ func DownloadFile(url string, dest string) error {
 
 // Unzip will decompress a zip archive, moving all files and folders
 // within the zip file (parameter 1) to an output directory (parameter 2).
-func Unzip(src string, dest string) ([]string, error) {
+func unzip(src string, dest string) ([]string, error) {
 
 	var filenames []string
 
@@ -122,39 +129,121 @@ func Unzip(src string, dest string) ([]string, error) {
 	return filenames, nil
 }
 
+func pipeToSocket(
+	useStdOut bool,
+	onStdio func(string),
+	wgStream *sync.WaitGroup,
+	cmd *exec.Cmd,
+	c chan struct{},
+) {
+	defer wgStream.Done()
+
+	var stdio io.ReadCloser
+	var err error
+
+	if useStdOut {
+		stdio, err = cmd.StdoutPipe()
+	} else {
+		stdio, err = cmd.StderrPipe()
+	}
+	if err != nil {
+		panic(err)
+	}
+	<-c
+	scanner := bufio.NewScanner(stdio)
+	for scanner.Scan() {
+		onStdio(scanner.Text())
+	}
+}
+
+func cmdStream(command string, onStdout func(string), onStderr func(string)) error {
+	Proc := exec.Command("bash", "-c", command)
+	stdoutChan := make(chan struct{})
+	stderrChan := make(chan struct{})
+
+	var wgStream sync.WaitGroup
+	wgStream.Add(2)
+
+	go pipeToSocket(true, onStdout, &wgStream, Proc, stdoutChan)
+	go pipeToSocket(false, onStderr, &wgStream, Proc, stderrChan)
+
+	stdoutChan <- struct{}{}
+	stderrChan <- struct{}{}
+	Proc.Start()
+
+	wgStream.Wait()
+
+	if err := Proc.Process.Kill(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func prepare() error {
+	go Status(StatusTypeInfo, "yarn install")
+
+	onStdout := func(m string) {
+		go Status(StatusTypeInfo, m)
+	}
+	onStderr := func(m string) {
+		go Status(StatusTypeWarning, m)
+	}
+
+	return cmdStream("cd project && yarn install", onStdout, onStderr)
+}
+
+func run() error {
+	go Status(StatusTypeInfo, "node index.js")
+
+	onStdout := func(m string) {
+		go Status(StatusTypeInfo, m)
+	}
+	onStderr := func(m string) {
+		go Status(StatusTypeError, m)
+	}
+
+	return cmdStream("cd project && node index", onStdout, onStderr)
+}
+
 // StartIntegration ...
 func StartIntegration() {
 	go Status(StatusTypeInfo, "starting integration")
 
-	signedURL, err := GetSignedURL()
+	signedURL, err := getSignedURL()
 	if err != nil {
-		Status(StatusTypeError, "unable to load integration files")
+		go Status(StatusTypeError, "unable to load integration files")
 		log.Fatal(err)
 	}
 
-	err = DownloadFile(signedURL, archive)
+	err = downloadFile(signedURL, archive)
 	if err != nil {
-		Status(StatusTypeError, "failed to start integration")
+		go Status(StatusTypeError, "failed to start integration")
 		log.Fatal(err)
 	}
 
-	_, err = Unzip(archive, project)
+	_, err = unzip(archive, project)
 	if err != nil {
-		Status(StatusTypeError, "failed to write all project files to disk")
+		go Status(StatusTypeError, "failed to write all project files to disk")
 		log.Fatal(err)
 	}
 
-	cmd := exec.Command("ls")
-	c := make(chan struct{})
-
-	go Run(cmd, c)
-
-	c <- struct{}{}
-	cmd.Start()
-
-	<- c
-	if err= cmd.Wait(); err != nil {
+	// Remove ZIP archive
+	err = os.Remove(archive)
+	if err != nil {
 		log.Println(err)
 	}
-	log.Println("Done")
+
+	// Run prepare CMD
+	err = prepare()
+	if err != nil {
+		go Status(StatusTypeError, "unable to run prepare command")
+		log.Fatal(err)
+	}
+
+	// Run integration CMD
+	err = run()
+	if err != nil {
+		go Status(StatusTypeError, "unable to run integration command")
+		log.Fatal(err)
+	}
 }

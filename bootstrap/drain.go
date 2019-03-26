@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"syscall"
 	"time"
 )
 
@@ -13,6 +15,36 @@ const (
 var (
 	lastCheck = int32(time.Now().Unix())
 )
+
+func killIntegration() error {
+	if Proc == nil {
+		return nil
+	}
+	pgid, err := syscall.Getpgid(Proc.Process.Pid)
+	if err != nil {
+		return err
+	}
+	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Terminate ...
+func Terminate(killAll bool) {
+	// Terminate integration process and container
+	if killAll {
+		if err := killIntegration(); err != nil {
+			log.Fatal("failed to kill integration process")
+		}
+		os.Exit(0)
+	}
+
+	// Just kill integration process
+	if err := killIntegration(); err != nil {
+		log.Fatal("failed to kill integration process")
+	}
+}
 
 // Tick -Update last checked timestamp.
 func Tick() {
@@ -30,7 +62,8 @@ func Drain() {
 		log.Printf("tick (terminating in %v seconds)\n", timeout-diff)
 
 		if diff >= timeout {
-			log.Println("TIMEOUT")
+			wg.Done()
+			Terminate(true)
 		}
 
 		time.Sleep(timeoutTick * time.Second)
