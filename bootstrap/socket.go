@@ -58,7 +58,6 @@ func Status(statusType string, data string) {
 		StatusType: statusType,
 		Data:       data,
 	}
-	log.Printf("Sending status: %v", message)
 	err := socketChannel.Emit("message", message)
 	if err != nil {
 		log.Println(err)
@@ -76,7 +75,6 @@ func Output(data string) {
 		I:    EnvI,
 		Data: data,
 	}
-	log.Printf("Sending output: %v", message)
 	err := socketChannel.Emit("message", message)
 	if err != nil {
 		log.Println(err)
@@ -110,7 +108,6 @@ func onDisconnectionHandler(c *gosocketio.Channel) {
 }
 
 func onMessageHandler(c *gosocketio.Channel, data interface{}) {
-	log.Printf("--- Client channel %s received someEvent with data: %v\n", c.Id(), data)
 	j, err := json.Marshal(data)
 	if err != nil {
 		log.Println(err)
