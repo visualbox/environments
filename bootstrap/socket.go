@@ -147,13 +147,15 @@ func onMessageHandler(c *gosocketio.Channel, data interface{}) {
 
 		j, err := json.Marshal(integration["model"])
 		if err != nil {
+			log.Printf("failed to marshal new model: %v", err)
 			EnvModel = "{}"
+		} else {
+			EnvModel = string(j)
 		}
-		EnvModel = string(j)
 
 		go StartIntegration()
 	default:
-		log.Printf("Unknown socket message type: %v\n", result["type"])
+		log.Printf("unknown socket message type: %v\n", result["type"])
 	}
 }
 

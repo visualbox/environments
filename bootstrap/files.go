@@ -182,9 +182,6 @@ func cmdStream(command string, onStdout func(string), onStderr func(string)) err
 
 	wgStream.Wait()
 
-	if err := Proc.Process.Kill(); err != nil {
-		return err
-	}
 	return nil
 }
 
