@@ -44,6 +44,10 @@ var (
 			"prepare": "pip3 install -r requirements.txt",
 			"run":     "python3 main.py",
 		},
+		"golang": map[string]string{
+			"prepare": "glide install",
+			"run":     "CGO_ENABLED=0 go run *.go",
+		},
 	}
 )
 

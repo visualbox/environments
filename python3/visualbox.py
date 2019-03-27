@@ -24,7 +24,7 @@ def output(message):
   
   if not isinstance(message, str):
     try:
-      message = dumps(vars(message), sort_keys=True)
+      message = dumps(message)
     except Exception:
       print("failed to parse output")
       return
