@@ -30,6 +30,21 @@ var (
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient = &http.Client{Transport: tr}
+	envCmd     = map[string]map[string]string{
+		// Backward compat
+		"nodejs": map[string]string{
+			"prepare": "yarn install",
+			"run":     "node index.js",
+		},
+		"node": map[string]string{
+			"prepare": "yarn install",
+			"run":     "node index.js",
+		},
+		"python3": map[string]string{
+			"prepare": "pip3 install -r requirements.txt",
+			"run":     "python3 main.py",
+		},
+	}
 )
 
 // GetSignedURL - Get signed URL for integration
@@ -186,8 +201,8 @@ func cmdStream(command string, onStdout func(string), onStderr func(string)) err
 }
 
 func prepare() error {
-	cmd := "yarn install"
-	go Status(StatusTypeInfo, "yarn install")
+	cmd := envCmd[EnvRuntime]["prepare"]
+	go Status(StatusTypeInfo, cmd)
 
 	onStdout := func(m string) {
 		go Status(StatusTypeInfo, m)
@@ -200,7 +215,7 @@ func prepare() error {
 }
 
 func run() error {
-	cmd := "node index.js"
+	cmd := envCmd[EnvRuntime]["run"]
 	go Status(StatusTypeInfo, cmd)
 
 	// Parse output string as JSON.

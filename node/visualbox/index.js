@@ -1,4 +1,3 @@
-const os = require('os');
 const net = require('net');
 
 let ready = false;

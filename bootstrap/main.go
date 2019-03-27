@@ -25,6 +25,9 @@ var (
 	// EnvModel - Initial integration configuration model.
 	EnvModel = os.Getenv("MODEL")
 
+	// EnvRuntime - Image runtime.
+	EnvRuntime = os.Getenv("RUNTIME")
+
 	wg = &sync.WaitGroup{}
 )
 
