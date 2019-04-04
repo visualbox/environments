@@ -26,6 +26,8 @@ ENV GOROOT /usr/lib/go
 ENV GOPATH /opt/go
 ENV GOBIN /go/bin
 ENV PATH $GOBIN:$PATH
+ENV CGO_ENABLED 0
+ENV GOOS linux
 
 RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin ${GOBIN}
 RUN curl https://glide.sh/get | sh
@@ -33,7 +35,7 @@ RUN curl https://glide.sh/get | sh
 WORKDIR /home/visualbox
 
 COPY ./bootstrap/bootstrap-linux-amd64 .
-COPY ./golang/visualbox /opt/go/src/
+COPY ./golang/visualbox ${GOPATH}/src/visualbox/
 
 RUN chown -Rv visualbox:visualbox /home/visualbox
 RUN chmod -Rv a+r /opt/go

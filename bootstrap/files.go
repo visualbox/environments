@@ -46,7 +46,7 @@ var (
 		},
 		"golang": map[string]string{
 			"prepare": "glide install",
-			"run":     "CGO_ENABLED=0 go run *.go",
+			"run":     "go run *.go",
 		},
 	}
 )
