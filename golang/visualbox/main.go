@@ -8,15 +8,15 @@ import (
 	"reflect"
 )
 
-// Model - Intergation configuration model.
+// MODEL - Intergation configuration model.
 var (
-	Model map[string]interface{}
+	MODEL map[string]interface{}
 	c     net.Conn
 	err   error
 )
 
 func init() {
-	if err = json.Unmarshal([]byte(os.Getenv("MODEL")), &Model); err != nil {
+	if err = json.Unmarshal([]byte(os.Getenv("MODEL")), &MODEL); err != nil {
 		panic(err)
 	}
 
