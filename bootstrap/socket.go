@@ -17,6 +17,8 @@ const (
 	StatusTypeWarning = "T_WARNING"
 	// StatusTypeError ...
 	StatusTypeError = "T_ERROR"
+	// StatusTypeTick ...
+	StatusTypeTick = "T_TICK"
 
 	messageTypeInit   = "INIT"
 	messageTypeStatus = "STATUS"
@@ -123,6 +125,7 @@ func onMessageHandler(c *gosocketio.Channel, data interface{}) {
 	switch result["type"] {
 	case "TICK":
 		Tick()
+		go Status(StatusTypeTick, "") // Should be made own message type
 	case "TERMINATE":
 		// Kill integration process and container
 		// if 'i' is not present or same as EnvI.
