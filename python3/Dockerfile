@@ -1,11 +1,12 @@
-FROM frolvlad/alpine-python3
+FROM python:alpine
+#FROM frolvlad/alpine-python3
 LABEL maintainer="Pontus Aurdal <pontus.edvard@gmail.com>"
 
 ARG UID=1000
 ARG GID=1000
 
 USER root
-RUN apk add --no-cache shadow sudo && \
+RUN apk add --no-cache shadow sudo build-base libffi-dev && \
     if [ -z "`getent group $GID`" ]; then \
       addgroup -S -g $GID visualbox; \
     else \

@@ -41,7 +41,7 @@ var (
 			"run":     "node index.js",
 		},
 		"python3": map[string]string{
-			"prepare": "pip3 install -r requirements.txt",
+			"prepare": "sudo pip3 install -r requirements.txt",
 			"run":     "python3 main.py",
 		},
 		"golang": map[string]string{
