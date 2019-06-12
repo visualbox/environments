@@ -6,7 +6,7 @@ ARG UID=1000
 ARG GID=1000
 
 USER root
-RUN apk add --no-cache shadow sudo build-base libffi-dev && \
+RUN apk add --no-cache shadow sudo build-base libffi-dev libxml2 libxml2-dev libxslt-dev && \
     if [ -z "`getent group $GID`" ]; then \
       addgroup -S -g $GID visualbox; \
     else \
